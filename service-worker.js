@@ -1,11 +1,5 @@
-const C = 'v1';
-const ASSETS = [
-'/',
-'/index.html',
-'/css/style.css',
-'/js/app.js',
-'/manifest.webmanifest'
-];
+const C = 'v2';
+const ASSETS = ['./', './index.html', './css/style.css', './js/app.js', './manifest.webmanifest'];
 self.addEventListener('install', e => {
 e.waitUntil(caches.open(C).then(c => c.addAll(ASSETS)));
 });

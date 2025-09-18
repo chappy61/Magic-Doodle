@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Magic Doodle（動くお絵描き）</title>
     <meta name="theme-color" content="#0b1220" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body>
     <header>
@@ -34,10 +34,10 @@
       <div class="hint">指でお絵描き → 「動かす」で線がぷるぷる。丸っぽく描くとボール判定でポヨン！</div>
     </footer>
 
-    <script src="/js/app.js" defer></script>
+    <script src="./js/app.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js"));
+        window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js"));
       }
     </script>
   </body>
