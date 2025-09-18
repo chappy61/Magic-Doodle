@@ -1,3 +1,4 @@
+
 (()=> {
   const canvas = document.getElementById('canvas');
   if (!canvas) { alert('#canvas が見つからないよ'); return; }
@@ -14,8 +15,10 @@
   const colors = ['#ffffff','#60a5fa','#34d399','#f472b6','#facc15','#f87171','#a78bfa','#22d3ee','#f97316','#10b981'];
   let brushColor = colors[0];
   let brushSize  = +sizeEl.value;
+  let rainbow = false, hue = 0; // 🌈 追加
+
   let isDrawing  = false;
-  let strokes    = []; // {points:[{x,y,t}], color, size, bbox, closed, behavior, vy, cx, cy, r}
+  let strokes    = []; // {points:[{x,y,t}], color, size, bbox, closed, behavior, vy, cx, cy, r, rainbow, hueStart}
   let current    = null;
   let animating  = false;
   let rafId      = null;
@@ -27,10 +30,8 @@
     const footH = document.querySelector('footer')?.offsetHeight || 0;
     const cssW  = window.innerWidth;
     const cssH  = Math.max(100, window.innerHeight - headH - footH);
-    // CSSサイズ
     canvas.style.width  = cssW + 'px';
     canvas.style.height = cssH + 'px';
-    // 実ピクセル解像度
     const dpr = Math.max(1, window.devicePixelRatio || 1);
     canvas.width  = Math.floor(cssW * dpr);
     canvas.height = Math.floor(cssH * dpr);
@@ -40,16 +41,41 @@
   window.addEventListener('resize', sizeToViewport);
   window.addEventListener('orientationchange', sizeToViewport);
 
-  // ---- パレット
+  // ---- パレット（色ボタン）
   for(const c of colors){
     const b = document.createElement('button');
     b.className='chip';
     b.innerHTML = `<span class="swatch" style="background:${c}"></span>`;
-    b.addEventListener('click', ()=>{ brushColor=c; swatchEl.style.background=c; updateBrushLabel(); });
+    b.addEventListener('click', ()=>{
+      rainbow = false;
+      brushColor=c;
+      swatchEl.style.background = c;
+      updateBrushLabel();
+    });
     paletteEl.appendChild(b);
   }
+  // 🌈 レインボーボタン追加
+  const rb = document.createElement('button');
+  rb.className = 'chip';
+  rb.textContent = '🌈 レインボー';
+  rb.title = 'レインボーブラシ';
+  rb.addEventListener('click', ()=>{
+    rainbow = !rainbow;
+    rb.classList.toggle('toggle-on', rainbow);
+    if (rainbow) {
+      swatchEl.style.background = 'linear-gradient(45deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)';
+    } else {
+      swatchEl.style.background = brushColor;
+    }
+    updateBrushLabel();
+  });
+  paletteEl.appendChild(rb);
+
   sizeEl.addEventListener('input', ()=>{ brushSize=+sizeEl.value; updateBrushLabel(); });
-  function updateBrushLabel(){ brushLabel.textContent = `${nameOfColor(brushColor)} / 太さ ${brushSize}`; }
+  function updateBrushLabel(){
+    const name = rainbow ? '虹' : nameOfColor(brushColor);
+    brushLabel.textContent = `${name} / 太さ ${brushSize}`;
+  }
   function nameOfColor(hex){
     const map={"#ffffff":"白","#60a5fa":"空","#34d399":"みどり","#f472b6":"ピンク","#facc15":"きいろ","#f87171":"あか","#a78bfa":"むらさき","#22d3ee":"みず","#f97316":"オレンジ","#10b981":"きみどり"};
     return map[hex]||hex;
@@ -73,18 +99,27 @@
     isDrawing = true;
     current = {
       points: [],
-      color: brushColor,
-      size:  brushSize,
-      bbox:  {minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},
-      closed:false,
+      color:  brushColor,
+      size:   brushSize,
+      bbox:   {minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},
+      closed: false,
       behavior:'wiggle',
-      vy:0, cx:0, cy:0, r:0
+      vy:0, cx:0, cy:0, r:0,
+      rainbow: rainbow,      // 🌈 このストロークは虹？
+      hueStart: hue          // 🌈 始点の色相
     };
     strokes.push(current);
     addPoint(e);
   }
   function addPoint(e){
     if(!isDrawing || !current) return;
+    // 🌈 モード中は色相を少しずつ進める
+    if (rainbow) {
+      hue = (hue + 3) % 360;
+      brushColor = `hsl(${hue}, 100%, 62%)`;
+      if (!current.rainbow) current.rainbow = true; // 途中で虹ONにしても反映
+      swatchEl.style.background = 'linear-gradient(45deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)';
+    }
     const p = getPos(e);
     current.points.push(p);
     current.bbox.minX = Math.min(current.bbox.minX, p.x);
@@ -137,29 +172,49 @@
     for(const s of strokes){
       ctx.lineCap='round';
       ctx.lineJoin='round';
-      ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.lineWidth=s.size;
+      ctx.lineWidth=s.size;
       if(s.behavior==='bounce' && animating){
         s.vy += 0.35;
         s.cy += s.vy;
         const floor = canvas.height/(window.devicePixelRatio||1) - s.r - 4;
         if(s.cy>floor){ s.cy=floor; s.vy*=-0.58; }
+        ctx.strokeStyle=s.color;
         ctx.beginPath();
         ctx.arc(s.cx, s.cy + bob, Math.max(4,s.r - 1 + Math.sin((t/140)) ), 0, Math.PI*2);
         ctx.stroke();
       }else{
         const pts = s.points;
         if(pts.length<2) continue;
-        ctx.beginPath();
-        for(let i=0;i<pts.length;i++){
-          const p=pts[i];
-          const n = Math.sin((i*0.35) + t*0.008);
-          const amp = animating ? Math.min(10, s.size*0.6) : 0;
-          const offX = n * amp * 0.6;
-          const offY = Math.cos((i*0.33)+t*0.009) * amp * 0.6 + bob;
-          const x = p.x + offX, y = p.y + offY;
-          if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        const amp = animating ? Math.min(10, s.size*0.6) : 0;
+        if (s.rainbow) {
+          // 🌈 セグメントごとに色相を回して描画
+          for (let i=1;i<pts.length;i++){
+            const p0=pts[i-1], p1=pts[i];
+            const n0 = Math.sin(((i-1)*0.35) + t*0.008);
+            const n1 = Math.sin((i*0.35) + t*0.008);
+            const offX0 = n0 * amp * 0.6;
+            const offY0 = Math.cos(((i-1)*0.33)+t*0.009) * amp * 0.6 + bob;
+            const offX1 = n1 * amp * 0.6;
+            const offY1 = Math.cos((i*0.33)+t*0.009) * amp * 0.6 + bob;
+            const x0=p0.x+offX0, y0=p0.y+offY0;
+            const x1=p1.x+offX1, y1=p1.y+offY1;
+            const hh = (s.hueStart + i*3) % 360;
+            ctx.strokeStyle = `hsl(${hh}, 100%, 62%)`;
+            ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+          }
+        } else {
+          ctx.strokeStyle=s.color;
+          ctx.beginPath();
+          for(let i=0;i<pts.length;i++){
+            const p=pts[i];
+            const n = Math.sin((i*0.35) + t*0.008);
+            const offX = n * amp * 0.6;
+            const offY = Math.cos((i*0.33)+t*0.009) * amp * 0.6 + bob;
+            const x = p.x + offX, y = p.y + offY;
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+          }
+          ctx.stroke();
         }
-        ctx.stroke();
       }
     }
   }
@@ -185,7 +240,26 @@
     animating = wasAnimating; if(wasAnimating && !rafId){ rafId=requestAnimationFrame(loop); }
   });
 
+  // --- ツール折りたたみ（しまう/出す）
+  const collapseBtn = document.getElementById('collapseBtn');
+  const expandFab   = document.getElementById('expandFab');
+  function rerenderViewport(){ try { sizeToViewport(); } catch(e){} }
+  function collapseTools(){
+    document.body.classList.add('tools-collapsed');
+    collapseBtn?.setAttribute('aria-expanded','false');
+    expandFab?.classList.remove('hidden');
+    rerenderViewport();
+  }
+  function expandTools(){
+    document.body.classList.remove('tools-collapsed');
+    collapseBtn?.setAttribute('aria-expanded','true');
+    expandFab?.classList.add('hidden');
+    rerenderViewport();
+  }
+  collapseBtn?.addEventListener('click', collapseTools);
+  expandFab?.addEventListener('click', expandTools);
+
   // start!
   sizeToViewport();
-  brushLabel && (brushLabel.textContent = `${nameOfColor(brushColor)} / 太さ ${brushSize}`);
+  updateBrushLabel();
 })();
