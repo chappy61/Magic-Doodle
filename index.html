@@ -3,15 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Magic Doodle（動くお絵描き）</title>
+    <title>Magic Doodle</title>
     <meta name="theme-color" content="#0b1220" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body>
     <header>
-      <div class="title">✨ Magic Doodle（動くお絵描き）</div>
-      <div class="toolbar">
+      <div class="title">✨ Magic Doodle ✨</div>
+      <button id="collapseBtn" class="chip ghost" aria-expanded="true" aria-controls="toolbar">▲ しまう</button>
+      <div class="toolbar" id="toolbar">
         <div class="row">
           <span class="chip" id="brushChip">
             <span class="swatch" id="swatch" style="background: #ffffff"></span>
@@ -22,18 +23,13 @@
         <span class="sep"></span>
         <div class="row" id="palette"></div>
         <span class="sep"></span>
-        <button id="animateBtn" class="big">▶️ 動かす</button>
-        <button id="clearBtn">🧼 まっさらに</button>
-        <button id="saveBtn">💾 画像保存</button>
+        <button id="animateBtn" class="big">▶️ うごく</button>
+        <button id="clearBtn">🧼 きえる</button>
       </div>
     </header>
-
     <canvas id="canvas"></canvas>
-
-    <footer>
-      <div class="hint">指でお絵描き → 「動かす」で線がぷるぷる。丸っぽく描くとボール判定でポヨン！</div>
-    </footer>
-
+    <!-- 折りたたみ時に出るフローティングボタン -->
+    <button id="expandFab" class="fab hidden" aria-expanded="false" aria-controls="toolbar">▼ ツール</button>
     <script src="./js/app.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {

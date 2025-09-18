@@ -30,10 +30,6 @@ header {
   top: 0;
   z-index: 10;
 }
-.title {
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -82,20 +78,6 @@ button:active {
   background: radial-gradient(1200px 600px at 70% -10%, rgba(96, 165, 250, 0.12), transparent 60%),
     radial-gradient(800px 400px at 10% 120%, rgba(167, 139, 250, 0.12), transparent 60%), #0b1220;
 }
-footer {
-  padding: 0.5rem env(safe-area-inset-right, 12px) calc(0.5rem + env(safe-area-inset-bottom, 12px))
-    env(safe-area-inset-left, 12px);
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(0deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0));
-}
-.hint {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
 .toggle-on {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #0b1220;
@@ -109,4 +91,31 @@ footer {
 }
 input[type="range"] {
   accent-color: var(--accent);
+}
+.chip.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+.fab {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 30;
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #0b1220;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+body.tools-collapsed header {
+  padding: 0.25rem 12px;
+}
+body.tools-collapsed .toolbar {
+  display: none;
+}
+body.tools-collapsed #expandFab {
+  display: block;
 }
