@@ -1,7 +1,10 @@
 (()=> {
   const canvas = document.getElementById('canvas');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d', { desynchronized: true,alpha: false });
+  // モバイルでのスクロール/ズーム既定動作を無効化
+  canvas.style.touchAction = 'none';
+
+  const ctx = canvas.getContext('2d', { desynchronized: true, alpha: false });
 
   // ====== UI要素
   const toolbar   = document.getElementById('toolbar');
@@ -12,18 +15,22 @@
   const sizeEl    = document.getElementById('size');
   const swatchEl  = document.getElementById('swatch');
   const brushLabel= document.getElementById('brushLabel');
+
+  // iOS判定（虹の実線化に使用）
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+
   // ====== 状態
   const colors = ['#ffffff','#60a5fa','#34d399','#f472b6','#facc15','#f87171','#a78bfa','#22d3ee','#f97316','#10b981'];
   let brushColor = colors[0];
   let brushSize  = +sizeEl.value;
   let rainbow = false, hue = 0;
-  
-  const behaviors = ['wiggle','bounce','float','rain'];
+
+  // 動き：ぷるぷる/ぽよん/ふわ/あめ/スライド/ズーム
+  const behaviors = ['wiggle','bounce','float','rain','slide','zoom'];
   let behaviorIdx = 0;
   const behaviorBtn = document.createElement('button');
   behaviorBtn.className = 'chip';
-  function labelBehavior(b){ return {wiggle:'ぷるぷる', bounce:'ぽよん', float:'ふわふわ', rain:'あめ'}[b]; }
+  function labelBehavior(b){ return {wiggle:'ぷるぷる', bounce:'ぽよん', float:'ふわふわ', rain:'あめ', slide:'スライド', zoom:'ズーム'}[b]; }
   function updateBehaviorBtn(){ behaviorBtn.textContent = `🎬 動き: ${labelBehavior(behaviors[behaviorIdx])}`; }
   behaviorBtn.addEventListener('click', ()=>{ behaviorIdx=(behaviorIdx+1)%behaviors.length; updateBehaviorBtn(); });
   updateBehaviorBtn();
@@ -53,7 +60,14 @@
   window.addEventListener('resize', sizeToViewport);
   window.addEventListener('orientationchange', sizeToViewport);
 
-  // ====== パレット
+  // ====== パレット（縦向きは2段化のためクラス切替）
+  function layoutPalette(){
+    const portrait = window.matchMedia('(orientation: portrait)').matches;
+    paletteEl.classList.toggle('two-rows', portrait);
+  }
+  window.addEventListener('resize', layoutPalette);
+  window.addEventListener('orientationchange', layoutPalette);
+
   for(const c of colors){
     const b = document.createElement('button');
     b.className='chip';
@@ -106,21 +120,21 @@
   function startDraw(e){
     e.preventDefault?.(); isDrawing=true;
     const mode = brushMode();
-    const p = getPos(e);
-    // 自由描画
+    getPos(e); // 座標を初回サンプリング（pは使わないがタイムスタンプ目的で呼ぶ）
     current = {
       type:'free',
       points:[],
       color: brushColor,
       size:  brushSize,
       bbox: {minX:1e9,minY:1e9,maxX:-1e9,maxY:-1e9},
-      closed:false, behavior: behaviors[behaviorIdx], 
+      closed:false, behavior: behaviors[behaviorIdx],
       vy:0, cx:0, cy:0, r:0,
       rainbow: rainbow,
       hueStart: hue,
       erase: erasing,
       mode: mode,
-      seed: Math.random()*1000, speed: 0.8 + Math.random()*0.6
+      seed: Math.random()*1000, speed: 0.8 + Math.random()*0.6,
+      drop: 0
     };
     strokes.push(current);
     addPoint(e);
@@ -128,10 +142,7 @@
 
   function addPoint(e){
     if(!isDrawing||!current) return;
-
-    // レインボーは色相前進
     if (rainbow){ hue=(hue+3)%360; brushColor=`hsl(${hue},100%,62%)`; current.rainbow=true; }
-
     const p=getPos(e);
     current.points.push(p);
     const b=current.bbox; b.minX=Math.min(b.minX,p.x); b.minY=Math.min(b.minY,p.y); b.maxX=Math.max(b.maxX,p.x); b.maxY=Math.max(b.maxY,p.y);
@@ -142,17 +153,22 @@
     if(!isDrawing||!current) return; isDrawing=false;
 
     if (current.type==='free'){
-      const pts=current.points; 
+      const pts=current.points;
       if(pts && pts.length>8){
         const a=pts[0], b=pts[pts.length-1], w=current.bbox.maxX-current.bbox.minX, h=current.bbox.maxY-current.bbox.minY;
         const isCircleish = Math.hypot(a.x-b.x,a.y-b.y) < Math.min(w,h)*0.35 && Math.abs(w-h) < Math.max(w,h)*0.35;
-        if(isCircleish){ current.closed=true; current.cx=(current.bbox.minX+current.bbox.maxX)/2; current.cy=(current.bbox.minY+current.bbox.maxY)/2;
-          current.r=(w+h)/4; current.behavior='bounce'; current.vy=0;
-        } else {
-        // 重心（適当でもOK。ここではバウンディングボックス中心）
+
+        // 重心（全モーションで使う）
         current.cx=(current.bbox.minX+current.bbox.maxX)/2;
         current.cy=(current.bbox.minY+current.bbox.maxY)/2;
-        } 
+
+        // ★「丸になる」のは“ぽよん”だけ
+        if(isCircleish && current.behavior==='bounce'){
+          current.closed=true;
+          current.r=(w+h)/4; current.vy=0;
+        } else {
+          current.closed=false; // 他モーションでは通常線のまま
+        }
       }
     }
     redraw(0);
@@ -161,8 +177,8 @@
 
   // 入力イベント（Pointer優先）
   if ('PointerEvent' in window) {
-    canvas.addEventListener('pointerdown', e=>{ canvas.setPointerCapture?.(e.pointerId); startDraw(e); }, {passive:false});
-    canvas.addEventListener('pointermove', e=>{ if(isDrawing) addPoint(e); }, {passive:false});
+    canvas.addEventListener('pointerdown', e=>{ e.preventDefault(); canvas.setPointerCapture?.(e.pointerId); startDraw(e); }, {passive:false});
+    canvas.addEventListener('pointermove', e=>{ if(isDrawing){ e.preventDefault(); addPoint(e); } }, {passive:false});
     canvas.addEventListener('pointerup', endDraw);
     canvas.addEventListener('pointercancel', endDraw);
   } else {
@@ -192,42 +208,15 @@
     else { ctx.setLineDash([]); ctx.lineCap='round'; }
   }
 
-  function drawShapePath(s){
-    const x0=Math.min(s.sx,s.ex), y0=Math.min(s.sy,s.ey);
-    const x1=Math.max(s.sx,s.ex), y1=Math.max(s.sy,s.ey);
-    const w=x1-x0, h=y1-y0, cx=(x0+x1)/2, cy=(y0+y1)/2, r=Math.max(4, Math.min(w,h)/2);
-    ctx.beginPath();
-    if (s.shape==='circle'){
-      ctx.arc(cx,cy,r,0,Math.PI*2);
-    } else if (s.shape==='rect'){
-      ctx.rect(x0,y0,w,h);
-    } else if (s.shape==='triangle'){
-      // 正三角形（底辺を下に）
-      const p1={x:cx, y:y0}, p2={x:x0, y:y1}, p3={x:x1, y:y1};
-      ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.lineTo(p3.x,p3.y); ctx.closePath();
-    } else if (s.shape==='star'){
-      // 5角星
-      const spikes=5, outer=r, inner=r*0.5;
-      let rot = -Math.PI/2;
-      ctx.moveTo(cx + Math.cos(rot)*outer, cy + Math.sin(rot)*outer);
-      for(let i=0;i<spikes;i++){
-        rot += Math.PI/spikes;
-        ctx.lineTo(cx + Math.cos(rot)*inner, cy + Math.sin(rot)*inner);
-        rot += Math.PI/spikes;
-        ctx.lineTo(cx + Math.cos(rot)*outer, cy + Math.sin(rot)*outer);
-      }
-      ctx.closePath();
-    }
-  }
-
   function drawFreeStroke(s, t){
     const pts = s.points;
     if(pts.length<2) return;
-    const amp = animating ? Math.min(10, s.size*0.6) : 0;
+    // ★ ぷるぷるは選択時のみ（他モーションでは揺らさない）
+    const amp = (animating && s.behavior==='wiggle') ? Math.min(10, s.size*0.6) : 0;
 
     if (s.erase){
       ctx.save(); ctx.globalCompositeOperation='destination-out';
-      ctx.lineWidth=s.size; setDashForMode('normal', s.size); // 消しゴムは常に実線
+      ctx.lineWidth=s.size; setDashForMode('normal', s.size);
       ctx.beginPath();
       for(let i=0;i<pts.length;i++){
         const p=pts[i], n=Math.sin((i*0.35)+t*0.008);
@@ -269,13 +258,13 @@
     }
 
     // 点線/ドット/ふつう
-    ctx.lineWidth = s.size;
+    ctx.lineWidth=s.size;
 
     if (s.rainbow && !s.erase) {
-      // ★虹：iOSでは実線に固定（ダッシュが抜ける問題回避）
+      // ★一本のストローク内で色相を進める（iOSは実線）
       if (isIOS) { ctx.setLineDash([]); ctx.lineCap = 'round'; }
       else { setDashForMode(s.mode, s.size); }
-      const STEP = 4; // 色の進む速さ（3〜6で好みに）
+      const STEP = 4;
       for (let i = 1; i < pts.length; i++) {
         const p0 = pts[i - 1], p1 = pts[i];
         const n0 = Math.sin(((i - 1) * 0.35) + t * 0.008);
@@ -285,14 +274,11 @@
         const x1 = p1.x + n1 * amp * 0.6;
         const y1 = p1.y + Math.cos((i * 0.33) + t * 0.009) * amp * 0.6;
 
-        ctx.strokeStyle = s.rainbow ? `hsl(${(s.hueStart + pts.length)%360},100%,62%)` : s.color;        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.lineTo(x1, y1);
-        ctx.stroke();
+        ctx.strokeStyle = `hsl(${(s.hueStart + i * STEP) % 360}, 100%, 62%)`;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
       }
-      ctx.setLineDash([]); // リセット
+      ctx.setLineDash([]);
     } else {
-      // 単色描画（これまで通り）
       setDashForMode(s.mode, s.size);
       ctx.strokeStyle = s.color;
       ctx.beginPath();
@@ -313,8 +299,7 @@
     ctx.lineWidth = s.size;
     setDashForMode(s.mode, s.size);
     ctx.strokeStyle = s.color;
-    drawShapePath(s);
-    ctx.stroke();
+    // 形ツール用（今は未使用だが残す）
     ctx.restore();
     ctx.setLineDash([]);
   }
@@ -326,30 +311,47 @@
       ctx.lineJoin='round';
       if(s.type==='shape'){
         drawShapeStroke(s);
-      }else{
-        // bounce (ボール判定)は通常線のみ適用
-        if(s.behavior==='bounce' && animating && !s.erase){
+      } else {
+        if(s.behavior==='bounce' && animating && s.closed && !s.erase){
+          // ぽよん：丸にしてバウンド
           s.vy+=0.35; s.cy+=s.vy;
           const floor = canvas.height/(window.devicePixelRatio||1) - s.r - 4;
           if(s.cy>floor){ s.cy=floor; s.vy*=-0.58; }
           ctx.lineWidth=s.size; ctx.strokeStyle=s.color;
           ctx.beginPath(); ctx.arc(s.cx, s.cy + bob, Math.max(4,s.r-1+Math.sin((t/140))), 0, Math.PI*2); ctx.stroke();
-          } else if (s.behavior==='float' && animating) {
-            // ふわふわ：上下にゆっくり揺らして描く
-            ctx.save();
-            const dy = Math.sin((t*0.003) + s.seed) * 6;
-            ctx.translate(0, dy);
-            drawFreeStroke(s, t);
-            ctx.restore();
-          } else if (s.behavior==='rain' && animating) {
-            // あめ：下に落ち続ける（ループ）
-            s.drop = (s.drop||0) + s.speed;
-            const H = canvas.height/(window.devicePixelRatio||1);
-            ctx.save();
-            ctx.translate(0, (s.drop % (H + 40)) - 20);
-            drawFreeStroke(s, t);
-            ctx.restore();
-          } else {
+        } else if (s.behavior==='float' && animating) {
+          // ふわふわ：上下ゆらし
+          ctx.save();
+          const dy = Math.sin((t*0.003) + s.seed) * 6;
+          ctx.translate(0, dy);
+          drawFreeStroke(s, t);
+          ctx.restore();
+        } else if (s.behavior==='rain' && animating) {
+          // あめ：下に落ち続ける（ループ）
+          s.drop = (s.drop||0) + s.speed;
+          const H = canvas.height/(window.devicePixelRatio||1);
+          ctx.save();
+          ctx.translate(0, (s.drop % (H + 40)) - 20);
+          drawFreeStroke(s, t);
+          ctx.restore();
+        } else if (s.behavior==='slide' && animating) {
+          // スライド：左右にゆらゆら
+          ctx.save();
+          const dx = Math.sin((t*0.003) + s.seed) * 10;
+          ctx.translate(dx, 0);
+          drawFreeStroke(s, t);
+          ctx.restore();
+        } else if (s.behavior==='zoom' && animating) {
+          // ズーム：拡大縮小（重心中心）
+          ctx.save();
+          const sf = 1 + 0.12 * Math.sin((t*0.003) + s.seed);
+          ctx.translate(s.cx, s.cy);
+          ctx.scale(sf, sf);
+          ctx.translate(-s.cx, -s.cy);
+          drawFreeStroke(s, t);
+          ctx.restore();
+        } else {
+          // ふつう（ぷるぷるは drawFreeStroke 内で制御）
           drawFreeStroke(s, t);
         }
       }
@@ -373,5 +375,7 @@
   });
 
   // start
-  sizeToViewport(); updateBrushLabel();
+  sizeToViewport();
+  layoutPalette();
+  updateBrushLabel();
 })();
