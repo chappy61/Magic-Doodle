@@ -119,3 +119,24 @@ body.tools-collapsed .toolbar {
 body.tools-collapsed #expandFab {
   display: block;
 }
+/* パレットをグリッド化して“列方向に流す” */
+#palette {
+  display: grid;
+  grid-auto-flow: column; /* ボタンを左→右→次の列へ */
+  grid-auto-columns: max-content; /* ボタン幅に合わせる */
+  gap: 8px;
+}
+
+/* 横向き：1段 */
+@media (orientation: landscape) {
+  #palette {
+    grid-template-rows: 1fr;
+  }
+}
+
+/* 縦向き：2段固定 */
+@media (orientation: portrait) {
+  #palette {
+    grid-template-rows: repeat(2, auto);
+  }
+}

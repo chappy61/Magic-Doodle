@@ -12,12 +12,22 @@
   const sizeEl    = document.getElementById('size');
   const swatchEl  = document.getElementById('swatch');
   const brushLabel= document.getElementById('brushLabel');
-
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
   // ====== 状態
   const colors = ['#ffffff','#60a5fa','#34d399','#f472b6','#facc15','#f87171','#a78bfa','#22d3ee','#f97316','#10b981'];
   let brushColor = colors[0];
   let brushSize  = +sizeEl.value;
   let rainbow = false, hue = 0;
+  
+  const behaviors = ['wiggle','bounce','float','rain'];
+  let behaviorIdx = 0;
+  const behaviorBtn = document.createElement('button');
+  behaviorBtn.className = 'chip';
+  function labelBehavior(b){ return {wiggle:'ぷるぷる', bounce:'ぽよん', float:'ふわふわ', rain:'あめ'}[b]; }
+  function updateBehaviorBtn(){ behaviorBtn.textContent = `🎬 動き: ${labelBehavior(behaviors[behaviorIdx])}`; }
+  behaviorBtn.addEventListener('click', ()=>{ behaviorIdx=(behaviorIdx+1)%behaviors.length; updateBehaviorBtn(); });
+  updateBehaviorBtn();
+  toolbar.appendChild(behaviorBtn);
 
   // ブラシモード：normal / fuzzy(もこもこ) / dashed(点線) / dotted(ドット)
   const brushModes = ['normal','fuzzy','dashed','dotted'];
@@ -104,12 +114,13 @@
       color: brushColor,
       size:  brushSize,
       bbox: {minX:1e9,minY:1e9,maxX:-1e9,maxY:-1e9},
-      closed:false, behavior:'wiggle',
+      closed:false, behavior: behaviors[behaviorIdx], 
       vy:0, cx:0, cy:0, r:0,
       rainbow: rainbow,
       hueStart: hue,
       erase: erasing,
-      mode: mode
+      mode: mode,
+      seed: Math.random()*1000, speed: 0.8 + Math.random()*0.6
     };
     strokes.push(current);
     addPoint(e);
@@ -136,7 +147,12 @@
         const a=pts[0], b=pts[pts.length-1], w=current.bbox.maxX-current.bbox.minX, h=current.bbox.maxY-current.bbox.minY;
         const isCircleish = Math.hypot(a.x-b.x,a.y-b.y) < Math.min(w,h)*0.35 && Math.abs(w-h) < Math.max(w,h)*0.35;
         if(isCircleish){ current.closed=true; current.cx=(current.bbox.minX+current.bbox.maxX)/2; current.cy=(current.bbox.minY+current.bbox.maxY)/2;
-          current.r=(w+h)/4; current.behavior='bounce'; current.vy=0; }
+          current.r=(w+h)/4; current.behavior='bounce'; current.vy=0;
+        } else {
+        // 重心（適当でもOK。ここではバウンディングボックス中心）
+        current.cx=(current.bbox.minX+current.bbox.maxX)/2;
+        current.cy=(current.bbox.minY+current.bbox.maxY)/2;
+        } 
       }
     }
     redraw(0);
@@ -253,17 +269,42 @@
     }
 
     // 点線/ドット/ふつう
-    ctx.lineWidth=s.size;
-    setDashForMode(s.mode, s.size);
-    ctx.strokeStyle = s.rainbow ? `hsl(${(s.hueStart)%360},100%,62%)` : s.color;
-    ctx.beginPath();
-    for(let i=0;i<pts.length;i++){
-      const p=pts[i], n=Math.sin((i*0.35)+t*0.008);
-      const x=p.x+n*amp*0.6, y=p.y+Math.cos((i*0.33)+t*0.009)*amp*0.6;
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    ctx.lineWidth = s.size;
+
+    if (s.rainbow && !s.erase) {
+      // ★虹：iOSでは実線に固定（ダッシュが抜ける問題回避）
+      if (isIOS) { ctx.setLineDash([]); ctx.lineCap = 'round'; }
+      else { setDashForMode(s.mode, s.size); }
+      const STEP = 4; // 色の進む速さ（3〜6で好みに）
+      for (let i = 1; i < pts.length; i++) {
+        const p0 = pts[i - 1], p1 = pts[i];
+        const n0 = Math.sin(((i - 1) * 0.35) + t * 0.008);
+        const n1 = Math.sin((i * 0.35) + t * 0.008);
+        const x0 = p0.x + n0 * amp * 0.6;
+        const y0 = p0.y + Math.cos(((i - 1) * 0.33) + t * 0.009) * amp * 0.6;
+        const x1 = p1.x + n1 * amp * 0.6;
+        const y1 = p1.y + Math.cos((i * 0.33) + t * 0.009) * amp * 0.6;
+
+        ctx.strokeStyle = s.rainbow ? `hsl(${(s.hueStart + pts.length)%360},100%,62%)` : s.color;        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]); // リセット
+    } else {
+      // 単色描画（これまで通り）
+      setDashForMode(s.mode, s.size);
+      ctx.strokeStyle = s.color;
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i], n = Math.sin((i * 0.35) + t * 0.008);
+        const x = p.x + n * amp * 0.6;
+        const y = p.y + Math.cos((i * 0.33) + t * 0.009) * amp * 0.6;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
-    ctx.stroke();
-    ctx.setLineDash([]); // リセット
   }
 
   function drawShapeStroke(s){
@@ -293,7 +334,22 @@
           if(s.cy>floor){ s.cy=floor; s.vy*=-0.58; }
           ctx.lineWidth=s.size; ctx.strokeStyle=s.color;
           ctx.beginPath(); ctx.arc(s.cx, s.cy + bob, Math.max(4,s.r-1+Math.sin((t/140))), 0, Math.PI*2); ctx.stroke();
-        } else {
+          } else if (s.behavior==='float' && animating) {
+            // ふわふわ：上下にゆっくり揺らして描く
+            ctx.save();
+            const dy = Math.sin((t*0.003) + s.seed) * 6;
+            ctx.translate(0, dy);
+            drawFreeStroke(s, t);
+            ctx.restore();
+          } else if (s.behavior==='rain' && animating) {
+            // あめ：下に落ち続ける（ループ）
+            s.drop = (s.drop||0) + s.speed;
+            const H = canvas.height/(window.devicePixelRatio||1);
+            ctx.save();
+            ctx.translate(0, (s.drop % (H + 40)) - 20);
+            drawFreeStroke(s, t);
+            ctx.restore();
+          } else {
           drawFreeStroke(s, t);
         }
       }
