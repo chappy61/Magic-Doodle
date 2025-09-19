@@ -7,16 +7,16 @@
     <meta name="theme-color" content="#0b1220" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./css/style.css" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   </head>
   <body>
     <header>
-      <div class="title">✨ Magic Doodle ✨</div>
-      <button id="collapseBtn" class="chip ghost" aria-expanded="true" aria-controls="toolbar">▲ しまう</button>
+      <button id="collapseBtn" class="chip ghost" aria-expanded="true" aria-controls="toolbar">▲</button>
       <div class="toolbar" id="toolbar">
         <div class="row">
           <span class="chip" id="brushChip">
             <span class="swatch" id="swatch" style="background: #ffffff"></span>
-            <span id="brushLabel">白 / 太さ 14</span>
+            <span id="brushLabel">しろ</span>
           </span>
           <input id="size" type="range" min="4" max="40" value="14" />
         </div>
@@ -29,7 +29,7 @@
     </header>
     <canvas id="canvas"></canvas>
     <!-- 折りたたみ時に出るフローティングボタン -->
-    <button id="expandFab" class="fab hidden" aria-expanded="false" aria-controls="toolbar">▼ ツール</button>
+    <button id="expandFab" class="fab hidden" aria-expanded="false" aria-controls="toolbar">▼</button>
     <script src="./js/app.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
