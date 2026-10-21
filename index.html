@@ -6,7 +6,7 @@
     <title>Magic Doodle</title>
     <meta name="theme-color" content="#0b1220" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./style.css?v=11" />
     <link rel="icon" href="./icons/icon_192.png" type="image/png" />
     <link rel="apple-touch-icon" href="./icons/icon_192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -29,7 +29,7 @@
       </section>
     </header>
     <canvas id="canvas" aria-label="おえかきキャンバス"></canvas>
-    <script src="./js/app.js" defer></script>
+    <script src="./app.js?v=11" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js"));
