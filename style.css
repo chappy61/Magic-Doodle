@@ -1,0 +1,155 @@
+:root {
+  --bg: #0b1220; /* 深い紺で集中しやすい */
+  --panel: #111827;
+  --accent: #60a5fa;
+  --accent-2: #a78bfa;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem env(safe-area-inset-right, 12px) 0.5rem env(safe-area-inset-left, 12px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0));
+  backdrop-filter: blur(6px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+button,
+.chip {
+  border: none;
+  background: #1f2937;
+  color: var(--text);
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35) inset, 0 1px 0 rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+button:active {
+  transform: translateY(1px);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25) inset;
+}
+.row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.sep {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.12);
+}
+#canvas {
+  touch-action: none;
+  display: block;
+  width: 100vw;
+  height: calc(100vh - 110px);
+  background: radial-gradient(1200px 600px at 70% -10%, rgba(96, 165, 250, 0.12), transparent 60%),
+    radial-gradient(800px 400px at 10% 120%, rgba(167, 139, 250, 0.12), transparent 60%), #0b1220;
+}
+.toggle-on {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #0b1220;
+  font-weight: 700;
+}
+.big {
+  font-size: 1.05rem;
+}
+.hidden {
+  display: none;
+}
+input[type="range"] {
+  accent-color: var(--accent);
+}
+.chip.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+.fab {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 30;
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #0b1220;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+body.tools-collapsed header {
+  padding: 0.25rem 12px;
+}
+body.tools-collapsed .toolbar {
+  display: none;
+}
+body.tools-collapsed #expandFab {
+  display: block;
+}
+/* パレットをグリッド化して“列方向に流す” */
+#palette {
+  display: grid;
+  grid-auto-flow: column; /* ボタンを左→右→次の列へ */
+  grid-auto-columns: max-content; /* ボタン幅に合わせる */
+  gap: 8px;
+}
+
+/* 横向き：1段 */
+@media (orientation: landscape) {
+  #palette {
+    grid-template-rows: 1fr;
+  }
+}
+
+/* 縦向き：2段固定 */
+@media (orientation: portrait) {
+  #palette {
+    grid-template-rows: repeat(2, auto);
+  }
+}
+/* Five tools stay on one row; option panels overlay rather than resize the drawing. */
+body { overflow: hidden; overscroll-behavior: none; }
+header { flex: none; position: relative; padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) 6px max(6px, env(safe-area-inset-left)); }
+.toolbar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; width: 100%; max-width: 600px; margin: auto; }
+.toolbar button { display: flex; justify-content: center; align-items: center; gap: 3px; min-height: 46px; padding: 6px 2px; font: inherit; font-size: clamp(11px, 2.8vw, 16px); white-space: nowrap; }
+.toolbar .swatch { width: 16px; height: 16px; flex: none; }
+.popover { position: absolute; top: 100%; left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); max-width: 560px; margin: auto; padding: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #172033; border: 1px solid #45516a; border-radius: 16px; box-shadow: 0 12px 30px #0008; }
+[hidden] { display: none !important; }
+#palette { display: grid; grid-auto-flow: row; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto; width: 100%; gap: 6px; }
+#palette button { min-height: 44px; padding: 8px; justify-content: center; }
+.popover button { min-height: 44px; }
+#canvas { flex: none; user-select: none; -webkit-user-select: none; }
+button:focus-visible, input:focus-visible { outline: 3px solid #facc15; outline-offset: 2px; }

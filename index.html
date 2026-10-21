@@ -13,25 +13,22 @@
   </head>
   <body>
     <header>
-      <button id="collapseBtn" class="chip ghost" aria-expanded="true" aria-controls="toolbar">▲</button>
-      <div class="toolbar" id="toolbar">
-        <div class="row">
-          <span class="chip" id="brushChip">
-            <span class="swatch" id="swatch" style="background: #ffffff"></span>
-            <span id="brushLabel">しろ</span>
-          </span>
-          <input id="size" type="range" min="4" max="40" value="14" />
-        </div>
-        <span class="sep"></span>
-        <div class="row" id="palette"></div>
-        <span class="sep"></span>
-        <button id="animateBtn" class="big">▶️ うごく</button>
-        <button id="clearBtn">🧼 きえる</button>
-      </div>
+      <nav class="toolbar" id="toolbar" aria-label="おえかきどうぐ">
+        <button id="colorBtn" aria-expanded="false" aria-controls="colorPanel"><span class="swatch" id="swatch" style="background:#fff"></span> いろ</button>
+        <button id="behaviorBtn" aria-expanded="false" aria-controls="motionPanel">🎬 うごき</button>
+        <button id="brushBtn" aria-expanded="false" aria-controls="penPanel">🖌 ぺん</button>
+        <button id="animateBtn">▶️ うごく</button>
+        <button id="clearBtn">🧼 けす</button>
+      </nav>
+      <section id="colorPanel" class="popover" aria-label="いろをえらぶ" hidden>
+        <span id="brushLabel">しろ</span><div id="palette"></div>
+      </section>
+      <section id="motionPanel" class="popover" aria-label="うごきをえらぶ" hidden></section>
+      <section id="penPanel" class="popover" aria-label="ぺんをえらぶ" hidden>
+        <label for="size">ふとさ</label><input id="size" aria-label="ぺんのふとさ" type="range" min="4" max="40" value="14" />
+      </section>
     </header>
-    <canvas id="canvas"></canvas>
-    <!-- 折りたたみ時に出るフローティングボタン -->
-    <button id="expandFab" class="fab hidden" aria-expanded="false" aria-controls="toolbar">▼</button>
+    <canvas id="canvas" aria-label="おえかきキャンバス"></canvas>
     <script src="./js/app.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {

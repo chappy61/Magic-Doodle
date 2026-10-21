@@ -1,4 +1,4 @@
-const C = 'v9';
+const C = 'magic-doodle-v10';
 const ASSETS = ['./', './index.html', './css/style.css', './js/app.js', './manifest.webmanifest'];
 self.addEventListener('install', e => {
 e.waitUntil(caches.open(C).then(c => c.addAll(ASSETS)));
