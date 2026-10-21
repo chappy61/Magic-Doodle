@@ -444,7 +444,7 @@
     animating=was; if(was && !rafId) rafId=requestAnimationFrame(loop);
   });
 
-  // start
+  // start 
   sizeToViewport();
   layoutPalette();
   updateBrushLabel();
